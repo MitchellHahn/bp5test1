@@ -1,12 +1,12 @@
 @if ($step === 1)
     <form method="post" action="">
         <input type="text" name="current_node" />
-        <h2>Add a new question</h2>
+        <h2>Add a new question [test]</h2>
 
         <input type="text" name="question" required />
 
         <div>
-                <button type="submit">Add question</button>
+            <button type="submit">Add question</button>
         </div>
     </form>
 

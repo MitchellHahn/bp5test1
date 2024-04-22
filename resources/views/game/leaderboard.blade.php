@@ -50,6 +50,7 @@
             </tr>
         @endforeach
 
-
-<script src="/js/game.js"></script>
-<script>getLeaderboard();</script>
+        <script src="{{ asset('js/game.js') }}?v={{ time() }}"></script>
+<script>
+    // getLeaderboard();
+</script>

@@ -3,10 +3,8 @@ let countdownTimer = null;
 let points = 10;
 let questionsAsked = 0;
 
-/*
 if(timer) {
     let countdown = 30;
-
     const getPoints = localStorage.getItem("points") || 0;
 
     if(Number(getPoints) > 70) {
@@ -31,6 +29,8 @@ if(timer) {
         }
     }, 1000);
 }
+
+
 function addPoints (url) {
     const currentPoints = localStorage.getItem('points');
     if(currentPoints) {
@@ -59,13 +59,14 @@ function savePoints() {
     });
 
     localStorage.setItem("leaderboard", JSON.stringify(leaderboardData));
-    window.location.href = "/start";
+    window.location.href = "http://localhost/bp5test1/public/start/1";
 }
 function gameOver() {
+    console.log(window.location.href);
     alert('You didn\'t answer the question in time and lost all your points.');
     points = 0;
     localStorage.setItem("points", '0');
-    window.location.href = '/start';
+    window.location.href = 'http://localhost/bp5test1/public/start/1';
 }
 
 function getLeaderboard() {
@@ -85,4 +86,3 @@ function getLeaderboard() {
         }
     }
 }
-*/

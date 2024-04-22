@@ -98,7 +98,7 @@ yes
         </div>
         {{--</div>--}}
 
-        <script defer src="http://localhost/bp5test1/public/js/game.js"></script>
+        <script defer src="{{ asset('js/game.js') }}?v={{time()}}"></script>
     </section>
 
 

@@ -1,6 +1,6 @@
 <?php //@extends('layouts.app')?>
 {{--@extends('layouts.user.functietoevoegen.layout')--}}
-<h4></h4>
+<h4>Game</h4>
 <br>
 start
 {{--@foreach($nodes as $node)--}}

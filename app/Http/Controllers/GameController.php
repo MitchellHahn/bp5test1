@@ -8,6 +8,7 @@ use App\Models\Relation;
 use App\Models\Score;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use function Ramsey\Uuid\setNodeProvider;
 
 class GameController extends Controller
 {
@@ -68,24 +69,29 @@ class GameController extends Controller
 //        dump($relation);
 //        $node = $relation->node_yes;
 
-        if($node->relation) {
-            $random_guess = $this->node_guess();
-
-            if($random_guess || ($node->question && Str::startsWith("answer", Str::lower($node->question)))) {
+        if ($node->relation) {
+            if ($node->question && Str::startsWith("answer", Str::lower($node->question))) {
                 $node->question = "Is this your character?";
             }
-            if($random_guess) {
-                $relation = $random_guess->relation->yes;
-            } else {
-                $relation = $node->relation->yes;
-            }
+            $relation = $node->relation->yes;
+            $this->set_node_history($node);
             return view('game.yes', compact('node', 'relation'));
         } else {
-            $this->node_guess_store($node);
             return view('game.gameover');
         }
     }
 
+    function set_node_history(Node $node) {
+        // node
+        // node_parent
+        // datum
+    }
+
+    function get_popular_nodes() {
+        return []; // array met alle populare nodes
+    }
+
+    /*
     function node_guess_store(Node $node) {
         History::insert([
             "datum" => date('Y-m-d H:i'),
@@ -94,7 +100,7 @@ class GameController extends Controller
     }
 
     function node_guess() {
-        $node_history = History::orderBy('datum', 'desc')->toArray();
+        $node_history = History::orderBy('datum', 'desc')->get()->toArray();
         $random = array_rand($node_history, 1);
         $node = Relation::where('node_yes', $random[0]->node);
 
@@ -104,6 +110,7 @@ class GameController extends Controller
             return null;
         }
     }
+    */
 
     /**
      * Display a listing of the resource.
@@ -114,11 +121,13 @@ class GameController extends Controller
     public function no(Node $node)
     {
         $relation = null;
+        /*
         $random_node_guess = $this->random_guess($node);
 
         if($random_node_guess) {
             $node = $random_node_guess;
         }
+        */
         if($node->question && Str::startsWith("answer", Str::lower($node->question))) {
             $node->question = "Is this your character?";
         }
