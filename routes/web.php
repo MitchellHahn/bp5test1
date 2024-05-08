@@ -59,3 +59,8 @@ Route::get('start/scoreinvoer', [GameController::class, 'score_invoer'])->name('
 
 //Route::get('start/{node?}/{relation?}/{node?}', [GameController::class, 'next'])->name('next')->where('page', '[0-9]+');
 
+
+
+///////////////////////////test////////////////////////////
+//Route::post('/loop-up', [GameController::class, 'handleLoopUpRequest'])->name('handle_loop_up');
+Route::post('/handle-loop-up', [GameController::class, 'handleLoopUpRequest'])->name('handle_loop_up');

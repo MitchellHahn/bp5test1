@@ -13,4 +13,25 @@ start
 {{--@endforeach--}}
 
 
+{{--------------------------------test---------------------------------}}
+{{--<form method="POST" action="{{ route('loop_up') }}">--}}
+{{--    @csrf--}}
+{{--    <input type="hidden" name="node_id" value="{{ $node->id }}">--}}
+{{--    <button type="submit">Trigger loop_up function</button>--}}
+{{--</form>--}}
+
+
+
+<form method="POST" action="{{ route('handle_loop_up') }}">
+    @csrf
+    <input type="hidden" name="node_id" value="11">
+    <button type="submit">Execute handleLoopUpRequest for node ID 11</button>
+</form>
+
+{{--@if ($lastNodeId !== null)--}}
+{{--    <p>Last Node ID from the loop: {{ $lastNodeId }}</p>--}}
+{{--@else--}}
+{{--    <p>No node ID found</p>--}}
+{{--@endif--}}
+
 {{--@extends('game.leaderboard')--}}

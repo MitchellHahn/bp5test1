@@ -60,6 +60,11 @@ class GameController extends Controller
     public function yes(Node $node)
     {
 
+        $initialNodeId = 11;
+        $this->loop_up($initialNodeId);
+        dd($this);
+
+
 //        $relation = node::where('relation');
 //        dump($node->id);
 
@@ -74,43 +79,152 @@ class GameController extends Controller
                 $node->question = "Is this your character?";
             }
             $relation = $node->relation->yes;
-            $this->set_node_history($node);
             return view('game.yes', compact('node', 'relation'));
         } else {
+            $this->set_node_history($node);
             return view('game.gameover');
         }
     }
 
-    function set_node_history(Node $node) {
-        // node
-        // node_parent
-        // datum
-    }
 
-    function get_popular_nodes() {
-        return []; // array met alle populare nodes
-    }
+    //////////store chosen node in history
+   public function set_node_history(Node $node) {
 
-    /*
-    function node_guess_store(Node $node) {
-        History::insert([
-            "datum" => date('Y-m-d H:i'),
-            "node" => $node->id
+
+            // Search for the node in the Relation model
+            $relation = Relation::where('node_yes', $node->id)
+                ->orWhere('node_no', $node->id)
+                ->first();
+
+            $parentId = $relation->parent_node;
+
+
+        History::create([
+            'node' => $node->id,
+            'parent_node' => $parentId
         ]);
+
+
     }
 
-    function node_guess() {
-        $node_history = History::orderBy('datum', 'desc')->get()->toArray();
-        $random = array_rand($node_history, 1);
-        $node = Relation::where('node_yes', $random[0]->node);
 
-        if($node) {
-            return $node;
+    public function handleLoopUpRequest(Request $request)
+    {
+
+
+///////////////////////find all 4x characters///////////////////////////////////
+
+
+        $histories = History::select('node')
+            ->groupBy('node')
+            ->havingRaw('COUNT(*) > 3')
+            ->get();
+
+// Collect all the node IDs that meet the condition
+        $nodeIds = $histories->pluck('node');
+
+// Retrieve all rows with the node IDs
+//        $filteredHistories = History::whereIn('node', $nodeIds)->get();
+//        $nodes = $filteredHistories->pluck('node');
+
+        dd($nodeIds);
+
+//////////////////////////choose 1 for machine learning////////////////////////
+
+
+
+//////////////////////loop from character upwards until the top///////////////////////////////
+        // Retrieve the node ID from the request
+        $nodeId = $request->input('node_id');
+
+        // Initialize an array to store visited node IDs
+        $visitedNodeIds = [];
+
+        // Find the node based on the ID
+        $node = Node::find($nodeId);
+
+        // Check if the node exists
+        if ($node) {
+            // Loop until there is no parent node found
+            while ($node !== null) {
+                // Search for the node in the Relation model
+                $relation = Relation::where('node_yes', $node->id)
+                    ->orWhere('node_no', $node->id)
+                    ->first();
+
+                if ($relation) {
+                    // Get the parent node
+                    $parentId = $relation->parent_node;
+
+                    // Check if $parentId is an integer (node ID)
+                    if (is_int($parentId)) {
+                        // Store the visited node ID
+                        $visitedNodeIds[] = $node->id;
+
+                        // Update $node for the next iteration
+                        $node = Node::find($parentId);
+                    } else {
+                        // If $parentId is not an integer, exit the loop
+                        $node = null;
+                    }
+                } else {
+                    // If no parent node is found, exit the loop
+                    $node = null;
+                }
+            }
         } else {
-            return null;
+            // Handle the case where the node with the given ID doesn't exist
+        }
+
+        // Retrieve all nodes that have been visited
+//        $visitedNodes = Node::whereIn('id', $visitedNodeIds)->get();
+
+
+//////////////////chek if node is in loop nodes list //////////////////////////
+        $nodeIdToCheck = 4; // Node ID to check
+
+        if (in_array($nodeIdToCheck, $visitedNodeIds)) {
+            echo "Node 4 is visited.";
+        } else {
+            echo "Node 4 is not visited.";
+        }
+
+
+//        dd($nodeIdToCheck);
+        // Redirect back to the previous page or any other page as needed
+        return back()->with('visitedNodes', $visitedNodes);
+    }
+
+
+
+    function set_parent_node_history($nodeId = null) {
+        if ($nodeId === null) {
+            // If no node ID is provided, return without performing any action
+            return;
+        }
+
+        while ($nodeId !== null) {
+            // Search for the node in the Relation model
+            $relation = Relation::where('node_yes', $nodeId)
+                ->orWhere('node_no', $nodeId)
+                ->first();
+
+            if ($relation) {
+                // Get the id of the row
+                $parentId = $relation->parent_node;
+                // Store the parent node id in the History model or perform any other action
+                // Example: History::create(['parent_node_id' => $parentId]);
+                // dd($parentId);
+                // Update $nodeId for the next iteration
+                $nodeId = $parentId;
+
+            } else {
+                // If no parent node is found, exit the loop
+                break;
+            }
         }
     }
-    */
+
 
     /**
      * Display a listing of the resource.

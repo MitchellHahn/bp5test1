@@ -12,13 +12,13 @@ class History extends Model
     protected $table = 'node_history';
     protected $fillable = [
         //table tijd
-        'datum', 'node', "id", "parent_node"
+        'datum', 'node', 'id', 'parent_node',
     ];
 
-    //    public function bedrijf()
-    //    {
-    //        return $this->belongsTo(Bedrijf::class );
-    //    }
+        public function node()
+        {
+            return $this->belongsTo(node::class, 'node' );
+        }
 
     //public function relation()
     //{
