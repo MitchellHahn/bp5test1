@@ -21,12 +21,20 @@ start
 {{--</form>--}}
 
 
-
 <form method="POST" action="{{ route('handle_loop_up') }}">
     @csrf
-    <input type="hidden" name="node_id" value="11">
+    <input type="hidden" name="node_id" value="">
     <button type="submit">Execute handleLoopUpRequest for node ID 11</button>
 </form>
+
+
+{{--@foreach ($nodeIds as $nodeId)--}}
+{{--    <form method="POST" action="{{ route('handle_loop_up') }}">--}}
+{{--        @csrf--}}
+{{--        <input type="hidden" name="node_id" value="{{ $nodeId }}">--}}
+{{--        <button type="submit">Execute handleLoopUpRequest for node ID {{ $nodeId }}</button>--}}
+{{--    </form>--}}
+{{--@endforeach--}}
 
 {{--@if ($lastNodeId !== null)--}}
 {{--    <p>Last Node ID from the loop: {{ $lastNodeId }}</p>--}}

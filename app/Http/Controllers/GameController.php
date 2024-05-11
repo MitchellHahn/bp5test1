@@ -120,77 +120,80 @@ class GameController extends Controller
             ->havingRaw('COUNT(*) > 3')
             ->get();
 
-// Collect all the node IDs that meet the condition
-        $nodeIds = $histories->pluck('node');
+        $FourTimesNodes = $histories->pluck('node')->toArray();
 
-// Retrieve all rows with the node IDs
-//        $filteredHistories = History::whereIn('node', $nodeIds)->get();
-//        $nodes = $filteredHistories->pluck('node');
-
-        dd($nodeIds);
-
-//////////////////////////choose 1 for machine learning////////////////////////
-
-
-
-//////////////////////loop from character upwards until the top///////////////////////////////
-        // Retrieve the node ID from the request
         $nodeId = $request->input('node_id');
 
-        // Initialize an array to store visited node IDs
-        $visitedNodeIds = [];
+// Loop through each item in $histories
+        $results = [];
 
-        // Find the node based on the ID
-        $node = Node::find($nodeId);
+// Loop through each item in $FourTimesNodes
+        foreach ($FourTimesNodes as $FourTimesNode) {
+            // Initialize an array to store visited node IDs
+            $visitedNodeIds = [];
 
-        // Check if the node exists
-        if ($node) {
-            // Loop until there is no parent node found
-            while ($node !== null) {
-                // Search for the node in the Relation model
-                $relation = Relation::where('node_yes', $node->id)
-                    ->orWhere('node_no', $node->id)
-                    ->first();
+            // Find the node based on the ID
+            $node = Node::find($FourTimesNode);
 
-                if ($relation) {
-                    // Get the parent node
-                    $parentId = $relation->parent_node;
+            // Check if the node exists
+            if ($node) {
+                // Loop until there is no parent node found
+                while ($node !== null) {
+                    // Search for the node in the Relation model
+                    $relation = Relation::where('node_yes', $node->id)
+                        ->orWhere('node_no', $node->id)
+                        ->first();
 
-                    // Check if $parentId is an integer (node ID)
-                    if (is_int($parentId)) {
-                        // Store the visited node ID
-                        $visitedNodeIds[] = $node->id;
+                    if ($relation) {
+                        // Get the parent node
+                        $parentId = $relation->parent_node;
 
-                        // Update $node for the next iteration
-                        $node = Node::find($parentId);
+                        // Check if $parentId is an integer (node ID)
+                        if (is_int($parentId)) {
+                            // Store the visited node ID
+                            $visitedNodeIds[] = $node->id;
+
+                            // Update $node for the next iteration
+                            $node = Node::find($parentId);
+                        } else {
+                            // If $parentId is not an integer, exit the loop
+                            $node = null;
+                        }
                     } else {
-                        // If $parentId is not an integer, exit the loop
+                        // If no parent node is found, exit the loop
                         $node = null;
                     }
-                } else {
-                    // If no parent node is found, exit the loop
-                    $node = null;
                 }
+            } else {
+                // Handle the case where the node with the given ID doesn't exist
             }
-        } else {
-            // Handle the case where the node with the given ID doesn't exist
+
+            // Check if node is in loop nodes list
+            $nodeIdToCheck = 4; // Node ID to check
+            $isVisited = in_array($nodeIdToCheck, $visitedNodeIds);
+
+            // Store the visitation status of the node
+            $results[$FourTimesNode] = $isVisited ? 'visited' : 'not visited';
         }
 
-        // Retrieve all nodes that have been visited
-//        $visitedNodes = Node::whereIn('id', $visitedNodeIds)->get();
-
-
-//////////////////chek if node is in loop nodes list //////////////////////////
-        $nodeIdToCheck = 4; // Node ID to check
-
-        if (in_array($nodeIdToCheck, $visitedNodeIds)) {
-            echo "Node 4 is visited.";
-        } else {
-            echo "Node 4 is not visited.";
+// Display results
+        foreach ($results as $nodeId => $status) {
+            echo "Node $nodeId is $status.\n";
         }
 
+//        if (in_array($nodeIdToCheck, $visitedNodeIds)) {
+//            echo "Node 4 is visited.";
+//        } else {
+//            echo "Node 4 is not visited.";
+//        }
+        dd($results);
 
-//        dd($nodeIdToCheck);
+
+
+
+
+
+
         // Redirect back to the previous page or any other page as needed
         return back()->with('visitedNodes', $visitedNodes);
     }
