@@ -8,6 +8,8 @@ use App\Models\Relation;
 use App\Models\Score;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
+
 use function Ramsey\Uuid\setNodeProvider;
 
 class GameController extends Controller
@@ -27,6 +29,9 @@ class GameController extends Controller
         // $tijd->toeslag_id = Toeslag::where('user_id', auth()->user()->id)->latest('created_at')->first()->id;
 
 //         $nodes = node::where('id','1')->first()->id;
+
+        // Reset cache
+        $this->reset_teller_cache();
 
         if(!$node->id) {
             return redirect("/start/1");
@@ -60,10 +65,6 @@ class GameController extends Controller
     public function yes(Node $node)
     {
 
-        $initialNodeId = 11;
-        $this->loop_up($initialNodeId);
-        dd($this);
-
 
 //        $relation = node::where('relation');
 //        dump($node->id);
@@ -73,6 +74,29 @@ class GameController extends Controller
 //        $node = $relation->node_yes->get();
 //        dump($relation);
 //        $node = $relation->node_yes;
+
+        $currentNodeId = $node->id;
+
+        // Onthoud vorige nodeId
+        // Cache::put("currentNodeId", $currentNodeId);
+
+
+        // Capture click
+        Cache::increment('click_count');
+
+// Retrieve click count
+        $totalClicks = Cache::get('click_count', 0);
+//        dd($totalClicks);
+
+        if($totalClicks == 2) {
+
+            $nodeIdToCheck = $currentNodeId;
+            $this->handleLoopUpRequest($nodeIdToCheck);
+            //
+//dd($currentNodeId);
+
+        }
+
 
         if ($node->relation) {
             if ($node->question && Str::startsWith("answer", Str::lower($node->question))) {
@@ -107,27 +131,15 @@ class GameController extends Controller
 
     }
 
-
-    public function handleLoopUpRequest(Request $request)
-    {
-
-
-///////////////////////find all 4x characters///////////////////////////////////
-
-
+    public function handleLoopUpRequest($currentVisitedNode) {
         $histories = History::select('node')
             ->groupBy('node')
             ->havingRaw('COUNT(*) > 3')
             ->get();
 
         $FourTimesNodes = $histories->pluck('node')->toArray();
-
-        $nodeId = $request->input('node_id');
-
-// Loop through each item in $histories
         $results = [];
 
-// Loop through each item in $FourTimesNodes
         foreach ($FourTimesNodes as $FourTimesNode) {
             // Initialize an array to store visited node IDs
             $visitedNodeIds = [];
@@ -168,37 +180,54 @@ class GameController extends Controller
                 // Handle the case where the node with the given ID doesn't exist
             }
 
+
+
             // Check if node is in loop nodes list
-            $nodeIdToCheck = 4; // Node ID to check
-            $isVisited = in_array($nodeIdToCheck, $visitedNodeIds);
+//            $nodeIdToCheck = 4; // Node ID to check
+            $isVisited = in_array($currentVisitedNode, $visitedNodeIds);
 
             // Store the visitation status of the node
             $results[$FourTimesNode] = $isVisited ? 'visited' : 'not visited';
         }
 
-// Display results
+        $visitedNodeIds = [];
+
         foreach ($results as $nodeId => $status) {
-            echo "Node $nodeId is $status.\n";
+            if ($status === 'visited') {
+                $visitedNodeIds[] = $nodeId;
+            }
         }
 
-//        if (in_array($nodeIdToCheck, $visitedNodeIds)) {
-//            echo "Node 4 is visited.";
-//        } else {
-//            echo "Node 4 is not visited.";
-//        }
-        dd($results);
+        foreach ($visitedNodeIds as $nodeId) {
+            echo "Node $nodeId is visited.\n";
+        }
+
+//        dd($isVisited);
+
+        $randomKey = array_rand($visitedNodeIds);
+        $randomNodeId = $visitedNodeIds[$randomKey];
+
+//        $randomNodeParentId = $this->getParentNodeId($randomNodeId);
+
+        $relation = Relation::where('node_yes', $randomNodeId)
+            ->orWhere('node_no', $randomNodeId)
+            ->first();
+
+        $parentId = $relation->parent_node;
 
 
 
 
 
+        if($parentId) {
+            redirect("/start/{$parentId}/");
+        }
+
+        echo "Random NodeID: {$randomNodeId}";
 
 
-        // Redirect back to the previous page or any other page as needed
-        return back()->with('visitedNodes', $visitedNodes);
+        return back()->with('visitedNodes', $visitedNodeIds);
     }
-
-
 
     function set_parent_node_history($nodeId = null) {
         if ($nodeId === null) {
@@ -237,6 +266,32 @@ class GameController extends Controller
      */
     public function no(Node $node)
     {
+
+
+        $currentNodeId = $node->id;
+
+        // Capture click
+        Cache::increment('click_count');
+
+        // Retrieve click count
+        $totalClicks = Cache::get('click_count', 0);
+//        dd($totalClicks);
+
+        if($totalClicks == 2) {
+
+            $nodeIdToCheck = $currentNodeId;
+            $this->handleLoopUpRequest($nodeIdToCheck);
+        //
+
+        }
+        // dd($currentNodeId);
+
+
+
+
+
+
+
         $relation = null;
         /*
         $random_node_guess = $this->random_guess($node);
@@ -378,7 +433,15 @@ class GameController extends Controller
     public function score_invoer()
     {
         // toont de view (blade bestand) "registratie"
+        $this->reset_teller_cache();
         return view('game.gameover');
+    }
+
+    /**
+     * Leeg teller cache
+     */
+    public function reset_teller_cache() {
+        Cache::clear();
     }
 
     /////////////////score opslaan//////////////////////
