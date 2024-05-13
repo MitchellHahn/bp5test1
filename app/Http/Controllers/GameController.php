@@ -64,39 +64,22 @@ class GameController extends Controller
      */
     public function yes(Node $node)
     {
-
-
-//        $relation = node::where('relation');
-//        dump($node->id);
-
-//        dd($relation->question);
-
-//        $node = $relation->node_yes->get();
-//        dump($relation);
-//        $node = $relation->node_yes;
-
         $currentNodeId = $node->id;
-
-        // Onthoud vorige nodeId
-        // Cache::put("currentNodeId", $currentNodeId);
-
 
         // Capture click
         Cache::increment('click_count');
 
-// Retrieve click count
+        // Retrieve click count
         $totalClicks = Cache::get('click_count', 0);
-//        dd($totalClicks);
 
-        if($totalClicks == 2) {
-
+        if ($totalClicks == 2) {
             $nodeIdToCheck = $currentNodeId;
-            $this->handleLoopUpRequest($nodeIdToCheck);
-            //
-//dd($currentNodeId);
+            $parentId = $this->handleLoopUpRequest($nodeIdToCheck);
 
+            if ($parentId) {
+                return redirect()->route('Yes', ['node' => $parentId]);
+            }
         }
-
 
         if ($node->relation) {
             if ($node->question && Str::startsWith("answer", Str::lower($node->question))) {
@@ -220,14 +203,18 @@ class GameController extends Controller
 
 
         if($parentId) {
-            redirect("/start/{$parentId}/");
+            return $parentId;
         }
 
-        echo "Random NodeID: {$randomNodeId}";
 
-
-        return back()->with('visitedNodes', $visitedNodeIds);
+        return null; // Return null if no parent ID found
     }
+
+//        echo "Random NodeID: {$randomNodeId}";
+
+
+//        return back()->with('visitedNodes', $visitedNodeIds);
+//    }
 
     function set_parent_node_history($nodeId = null) {
         if ($nodeId === null) {

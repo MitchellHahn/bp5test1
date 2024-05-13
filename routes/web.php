@@ -39,8 +39,8 @@ Route::get('admin', [HomeController::class, 'admin'])->middleware('admin');
 Route::get('home', [HomeController::class, 'home'])->middleware('user');
 
 Route::get('start/{node?}', [GameController::class, 'index'])->name('Start')->where('page', '[0-9]+');
-Route::get('start/{node?}/no/{relation?}', [GameController::class, 'no'])->name('No')->where('page', '[0-9]+');
-Route::get('start/{node?}/yes/{relation?}', [GameController::class, 'yes'])->name('Yes')->where('page', '[0-9]+');
+Route::get('start/{node?}/no/{relation?}', [GameController::class, 'no'])->name('No')->where('node', '[0-9]+');
+Route::get('start/{node?}/yes/{relation?}', [GameController::class, 'yes'])->name('Yes')->where('node', '[0-9]+');
 
 // score opslaan
 Route::post('start/{node?}/no/{relation?}', [GameController::class, 'score_opslaan'])->name('score_opslaan')->where('page', '[0-9]+');
