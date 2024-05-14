@@ -39,8 +39,11 @@ Route::get('admin', [HomeController::class, 'admin'])->middleware('admin');
 Route::get('home', [HomeController::class, 'home'])->middleware('user');
 
 Route::get('start/{node?}', [GameController::class, 'index'])->name('Start')->where('page', '[0-9]+');
-Route::get('start/{node?}/no/{relation?}', [GameController::class, 'no'])->name('No')->where('node', '[0-9]+');
-Route::get('start/{node?}/yes/{relation?}', [GameController::class, 'yes'])->name('Yes')->where('node', '[0-9]+');
+Route::get('start/{node?}/no/{relation?}', [GameController::class, 'no'])->name('No');
+Route::get('start/{node?}/yes/{relation?}', [GameController::class, 'yes'])->name('Yes');
+Route::get('start/smartguess/{node}/{totalClicks}', [GameController::class, 'SmartGuess'])
+    ->name('SmartGuess')
+    ->where(['node' => '[0-9]+', 'totalClicks' => '[0-9]+']);
 
 // score opslaan
 Route::post('start/{node?}/no/{relation?}', [GameController::class, 'score_opslaan'])->name('score_opslaan')->where('page', '[0-9]+');

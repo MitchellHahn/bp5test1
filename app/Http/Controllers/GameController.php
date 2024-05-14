@@ -10,6 +10,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Cache;
 
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redirect;
+
+
 use function Ramsey\Uuid\setNodeProvider;
 
 class GameController extends Controller
@@ -45,7 +49,7 @@ class GameController extends Controller
 //        return view('game.start', compact('questionNodes'))
 //            ->with('nodes', $questionNodes)
 //            ->with("test", "TEST");
-            if ($node->relation === null) {
+        if ($node->relation === null) {
 
 
 
@@ -53,57 +57,21 @@ class GameController extends Controller
 //                $newrelation = new relation();
 //                $newrelation->rels
 
-            }
-        }
-
-    /**
-     * Display a listing of the resource.
-     *
-     * @param  \App\Models\Node $node
-     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
-     */
-    public function yes(Node $node)
-    {
-        $currentNodeId = $node->id;
-
-        // Capture click
-        Cache::increment('click_count');
-
-        // Retrieve click count
-        $totalClicks = Cache::get('click_count', 0);
-
-        if ($totalClicks == 2) {
-            $nodeIdToCheck = $currentNodeId;
-            $parentId = $this->handleLoopUpRequest($nodeIdToCheck);
-
-            if ($parentId) {
-                return redirect()->route('Yes', ['node' => $parentId]);
-            }
-        }
-
-        if ($node->relation) {
-            if ($node->question && Str::startsWith("answer", Str::lower($node->question))) {
-                $node->question = "Is this your character?";
-            }
-            $relation = $node->relation->yes;
-            return view('game.yes', compact('node', 'relation'));
-        } else {
-            $this->set_node_history($node);
-            return view('game.gameover');
         }
     }
 
 
+
     //////////store chosen node in history
-   public function set_node_history(Node $node) {
+    public function set_node_history(Node $node) {
 
 
-            // Search for the node in the Relation model
-            $relation = Relation::where('node_yes', $node->id)
-                ->orWhere('node_no', $node->id)
-                ->first();
+        // Search for the node in the Relation model
+        $relation = Relation::where('node_yes', $node->id)
+            ->orWhere('node_no', $node->id)
+            ->first();
 
-            $parentId = $relation->parent_node;
+        $parentId = $relation->parent_node;
 
 
         History::create([
@@ -113,6 +81,7 @@ class GameController extends Controller
 
 
     }
+
 
     public function handleLoopUpRequest($currentVisitedNode) {
         $histories = History::select('node')
@@ -142,7 +111,6 @@ class GameController extends Controller
                     if ($relation) {
                         // Get the parent node
                         $parentId = $relation->parent_node;
-
                         // Check if $parentId is an integer (node ID)
                         if (is_int($parentId)) {
                             // Store the visited node ID
@@ -159,90 +127,91 @@ class GameController extends Controller
                         $node = null;
                     }
                 }
-            } else {
-                // Handle the case where the node with the given ID doesn't exist
             }
 
-
-
-            // Check if node is in loop nodes list
-//            $nodeIdToCheck = 4; // Node ID to check
+            // Check if current visited node is in the visited nodes list
             $isVisited = in_array($currentVisitedNode, $visitedNodeIds);
-
             // Store the visitation status of the node
             $results[$FourTimesNode] = $isVisited ? 'visited' : 'not visited';
         }
 
+        // Extract the nodes that were visited
         $visitedNodeIds = [];
-
         foreach ($results as $nodeId => $status) {
             if ($status === 'visited') {
                 $visitedNodeIds[] = $nodeId;
             }
         }
 
-        foreach ($visitedNodeIds as $nodeId) {
-            echo "Node $nodeId is visited.\n";
+        // If visitedNodeIds is empty, return early
+        if (empty($visitedNodeIds)) {
+            return null; // or any other appropriate action
         }
 
-//        dd($isVisited);
-
+        // Continue with the rest of the function if visitedNodeIds is not empty
         $randomKey = array_rand($visitedNodeIds);
         $randomNodeId = $visitedNodeIds[$randomKey];
-
-//        $randomNodeParentId = $this->getParentNodeId($randomNodeId);
 
         $relation = Relation::where('node_yes', $randomNodeId)
             ->orWhere('node_no', $randomNodeId)
             ->first();
 
-        $parentId = $relation->parent_node;
-
-
-
-
-
-        if($parentId) {
-            return $parentId;
+        if ($relation) {
+            $parentId = $relation->parent_node;
+            if ($parentId) {
+                return $parentId;
+            }
         }
-
 
         return null; // Return null if no parent ID found
     }
 
-//        echo "Random NodeID: {$randomNodeId}";
+    /**
+     * Display a listing of the resource.
+     *
+     * @param  \App\Models\Node $node
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
+     */
+    public function yes(Node $node)
+    {
+        // get current node
+        $currentNodeId = $node->id;
+
+        // Capture click
+        Cache::increment('click_count');
+
+        // Retrieve click count
+        $totalClicks = Cache::get('click_count', 0);
+
+        $relation = Relation::where('parent_node', $currentNodeId)
+            ->first();
+        // get the node from kolom "node_no" in the same row as the $currentNodeId
+
+        // fu
+        if ($totalClicks == 2) {
+//            $nodeIdToCheck = $currentNodeId;
+            $smartGuessInputNodeId = $relation->node_yes;
 
 
-//        return back()->with('visitedNodes', $visitedNodeIds);
-//    }
+            $smartGuessInputNode = Node::findOrFail($smartGuessInputNodeId);
 
-    function set_parent_node_history($nodeId = null) {
-        if ($nodeId === null) {
-            // If no node ID is provided, return without performing any action
-            return;
+            // Call SmartGuess method with the Node instance
+            return $this->SmartGuess($smartGuessInputNode->id, $totalClicks);
+
         }
 
-        while ($nodeId !== null) {
-            // Search for the node in the Relation model
-            $relation = Relation::where('node_yes', $nodeId)
-                ->orWhere('node_no', $nodeId)
-                ->first();
-
-            if ($relation) {
-                // Get the id of the row
-                $parentId = $relation->parent_node;
-                // Store the parent node id in the History model or perform any other action
-                // Example: History::create(['parent_node_id' => $parentId]);
-                // dd($parentId);
-                // Update $nodeId for the next iteration
-                $nodeId = $parentId;
-
-            } else {
-                // If no parent node is found, exit the loop
-                break;
+        if ($node->relation) {
+            if ($node->question && Str::startsWith("answer", Str::lower($node->question))) {
+                $node->question = "Is this your character?";
             }
+            $relation = $node->relation->yes;
+            return view('game.yes', compact('node', 'relation'));
+        } else {
+            $this->set_node_history($node);
+            return view('game.gameover');
         }
     }
+
 
 
     /**
@@ -255,29 +224,32 @@ class GameController extends Controller
     {
 
 
-        $currentNodeId = $node->id;
 
-        // Capture click
+        // Capture each click
         Cache::increment('click_count');
 
         // Retrieve click count
         $totalClicks = Cache::get('click_count', 0);
-//        dd($totalClicks);
 
-        if($totalClicks == 2) {
+        // get current node
+        $currentNodeId = $node->id;
 
-            $nodeIdToCheck = $currentNodeId;
-            $this->handleLoopUpRequest($nodeIdToCheck);
-        //
 
+        $relation = Relation::where('parent_node', $currentNodeId)
+            ->first();
+        // get the node from kolom "node_no" in the same row as the $currentNodeId
+
+
+
+//////////////////function execute SmartGues after the player has answered 2 questions//////////////////////
+        if ($totalClicks == 2) {
+            $smartGuessInputNodeId = $relation->node_no;
+
+
+            $smartGuessInputNode = Node::findOrFail($smartGuessInputNodeId);
+            return $this->SmartGuess($smartGuessInputNode->id, $totalClicks);
         }
         // dd($currentNodeId);
-
-
-
-
-
-
 
         $relation = null;
         /*
@@ -296,6 +268,48 @@ class GameController extends Controller
         return view('game.no',compact('node', 'relation'));
 
     }
+
+
+
+//    public function SmartGuess_YesNode($currentNodeId, $totalClicks) {
+//        if ($totalClicks == 2) {
+//            $relation = Relation::where('parent_node', $currentNodeId)->first();
+//            $smartGuessPredictionNodeId  = $this->handleLoopUpRequest($currentNodeId);
+//
+//            if ($smartGuessPredictionNodeId) {
+//                return redirect()->route('SmartGuess', ['node' => $smartGuessPredictionNodeId]);
+//            }
+//        }
+//
+//         Handle other logic for SmartGuess_YesNode if needed
+//    }
+
+
+
+
+    public function SmartGuess($currentNodeId, $totalClicks) {
+        Log::info("Entering SmartGuess with node ID: $currentNodeId and total clicks: $totalClicks");
+
+        if ($totalClicks == 2) {
+            $relation = Relation::where('parent_node', $currentNodeId)->first();
+            $smartGuessPredictionNodeId = $this->handleLoopUpRequest($currentNodeId);
+
+            Log::info("SmartGuessPredictionNodeId: $smartGuessPredictionNodeId");
+
+            if ($smartGuessPredictionNodeId && $smartGuessPredictionNodeId != $currentNodeId) {
+                return redirect()->route('SmartGuess', ['node' => $smartGuessPredictionNodeId, 'totalClicks' => $totalClicks]);
+            } else {
+                Log::warning("Redirect prevented to avoid a loop: SmartGuessPredictionNodeId ($smartGuessPredictionNodeId) is the same as currentNodeId ($currentNodeId)");
+            }
+        }
+
+        // Example data to pass to the view, you may replace this as per your logic
+        $node = Node::find($currentNodeId);
+
+        // Pass the node and smartGuessPredictionNodeId to the view
+        return view('SmartGuess', ['node' => $node, 'smartGuessPredictionNodeId' => $smartGuessPredictionNodeId]);
+    }
+
 
 
 
