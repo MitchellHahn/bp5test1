@@ -41,8 +41,13 @@ Route::get('home', [HomeController::class, 'home'])->middleware('user');
 Route::get('start/{node?}', [GameController::class, 'index'])->name('Start')->where('page', '[0-9]+');
 Route::get('start/{node?}/no/{relation?}', [GameController::class, 'no'])->name('No');
 Route::get('start/{node?}/yes/{relation?}', [GameController::class, 'yes'])->name('Yes');
+
 Route::get('start/smartguess/{node}/{totalClicks}', [GameController::class, 'SmartGuess'])
     ->name('SmartGuess')
+    ->where(['node' => '[0-9]+', 'totalClicks' => '[0-9]+']);
+
+Route::get('start/smartguessfailed/{node}', [GameController::class, 'ResetTo_SmartGuessInputNode'])
+    ->name('SmartGuessFailed')
     ->where(['node' => '[0-9]+', 'totalClicks' => '[0-9]+']);
 
 // score opslaan

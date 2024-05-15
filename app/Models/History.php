@@ -12,7 +12,7 @@ class History extends Model
     protected $table = 'node_history';
     protected $fillable = [
         //table tijd
-        'datum', 'node', 'id', 'parent_node',
+        'datum', 'node', 'id', 'name',
     ];
 
         public function node()

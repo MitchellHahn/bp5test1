@@ -6,12 +6,15 @@ use App\Models\History;
 use App\Models\Node;
 use App\Models\Relation;
 use App\Models\Score;
+use App\Models\SuccessNode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Cache;
 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\File;
+
 
 
 use function Ramsey\Uuid\setNodeProvider;
@@ -76,7 +79,7 @@ class GameController extends Controller
 
         History::create([
             'node' => $node->id,
-            'parent_node' => $parentId
+            'name' => $node->name
         ]);
 
 
@@ -148,6 +151,16 @@ class GameController extends Controller
             return null; // or any other appropriate action
         }
 
+
+      //create cash when SmartGuess is Executed
+        Cache::increment('SmartGuess_Executed');
+
+        Cache::put('SmartGuess_InputNode', $currentVisitedNode, 60);
+
+//        $test = Cache::get('SmartGuess_InputNode');
+//
+//dd($test);
+
         // Continue with the rest of the function if visitedNodeIds is not empty
         $randomKey = array_rand($visitedNodeIds);
         $randomNodeId = $visitedNodeIds[$randomKey];
@@ -200,6 +213,42 @@ class GameController extends Controller
 
         }
 
+//        if (Cache::has('SmartGuess_Executed') && $node->question && Str::startsWith("answer", Str::lower($node->question))) {
+
+        $answer = $node->answer;
+        if (Cache::has('SmartGuess_Executed') && Node::where('answer', $answer)->exists()) {
+            $parentNode = Node::where('answer', $answer)->first();
+
+            if (Relation::where('parent_node', $node->id)->exists()) {
+                $relation = Relation::where('parent_node', $node->id)->first();
+                $nodeYes = $relation->node_yes;
+
+                // Check if a SuccessNode already exists for the current nodeYes
+                if (!SuccessNode::where('node', $nodeYes)->exists()) {
+                    // Create the SuccessNode record
+                    SuccessNode::create([
+                        'node' => $nodeYes,
+                    ]);
+
+                    $latestSuccessNode = SuccessNode::latest()->first();
+                    $latestSuccessNode->delete();
+
+                    $this->set_node_history($nodeYes);
+
+                    // Log information
+                    Log::info('SuccessNode created for node with ID ' . $nodeYes);
+                }
+            } else {
+                // Log that the conditions were not met
+                Log::info('Conditions not met for creating SuccessNode for node with ID ' . $node->id);
+
+                $this->set_node_history($node);
+
+                return $this->Register_SmartGuess_SuccessNote($parentNode);
+            }
+
+        }
+
         if ($node->relation) {
             if ($node->question && Str::startsWith("answer", Str::lower($node->question))) {
                 $node->question = "Is this your character?";
@@ -224,7 +273,6 @@ class GameController extends Controller
     {
 
 
-
         // Capture each click
         Cache::increment('click_count');
 
@@ -240,11 +288,9 @@ class GameController extends Controller
         // get the node from kolom "node_no" in the same row as the $currentNodeId
 
 
-
 //////////////////function execute SmartGues after the player has answered 2 questions//////////////////////
         if ($totalClicks == 2) {
             $smartGuessInputNodeId = $relation->node_no;
-
 
             $smartGuessInputNode = Node::findOrFail($smartGuessInputNodeId);
             return $this->SmartGuess($smartGuessInputNode->id, $totalClicks);
@@ -259,6 +305,13 @@ class GameController extends Controller
             $node = $random_node_guess;
         }
         */
+
+        if (Cache::has('SmartGuess_Executed') && $node->question && Str::startsWith("answer", Str::lower($node->question))) {
+//             Retrieve SmartGuess cache for input SmartGuess
+            return $this->ResetTo_SmartGuessInputNode($node);
+
+        }
+
         if($node->question && Str::startsWith("answer", Str::lower($node->question))) {
             $node->question = "Is this your character?";
         }
@@ -268,22 +321,6 @@ class GameController extends Controller
         return view('game.no',compact('node', 'relation'));
 
     }
-
-
-
-//    public function SmartGuess_YesNode($currentNodeId, $totalClicks) {
-//        if ($totalClicks == 2) {
-//            $relation = Relation::where('parent_node', $currentNodeId)->first();
-//            $smartGuessPredictionNodeId  = $this->handleLoopUpRequest($currentNodeId);
-//
-//            if ($smartGuessPredictionNodeId) {
-//                return redirect()->route('SmartGuess', ['node' => $smartGuessPredictionNodeId]);
-//            }
-//        }
-//
-//         Handle other logic for SmartGuess_YesNode if needed
-//    }
-
 
 
 
@@ -303,6 +340,7 @@ class GameController extends Controller
             }
         }
 
+
         // Example data to pass to the view, you may replace this as per your logic
         $node = Node::find($currentNodeId);
 
@@ -311,6 +349,65 @@ class GameController extends Controller
     }
 
 
+    /**
+     * Display a listing of the resource.
+     *
+     * @param  \App\Models\Node $node
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
+     */
+    public function ResetTo_SmartGuessInputNode(Node $node) {
+
+        $SmartGuess_InputNode = Cache::get('SmartGuess_InputNode');
+//dd($SmartGuess_InputNode);
+
+        // Change SmartGuess cache status to failed
+//        $value = Cache::get('SmartGuess_Executed');
+
+        // Remove the 'SmartGuess_Executed' key
+//        Cache::forget('SmartGuess_Executed');
+
+        // Set the 'SmartGuess_Failed' key with the previous value
+//        Cache::put('SmartGuess_Failed', $value);
+
+        // Return the view with the node and SmartGuess_InputNode
+        return view('SmartGuessFailed', ['node' => $node, 'SmartGuess_InputNode' => $SmartGuess_InputNode]);
+
+    }
+
+
+    public function Register_SmartGuess_SuccessNote(Node $node) {
+        // Search for the node in the Relation model
+        $relation = Relation::where('node_yes', $node->id)
+            ->orWhere('node_no', $node->id)
+            ->first();
+
+        if ($relation) {
+            $parentId = $relation->parent_node;
+
+            // Create the SuccessNode record
+            SuccessNode::create([
+                'node' => $node->id,
+            ]);
+
+            return view('game.gameover');
+        }
+
+
+
+    function getCachedKeys()
+    {
+        $cachePath = storage_path('framework/cache/data');
+        $files = File::allFiles($cachePath);
+        $keys = [];
+
+        foreach ($files as $file) {
+            $fileName = $file->getFilename();
+            // Process the filename to get the cache key
+            $keys[] = $fileName;
+        }
+
+        return $keys;
+    }}
 
 
     ///voor het toevoegen van een de juiste character en een vraags als de gebruiker heeft gewonnen.
